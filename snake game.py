@@ -1,147 +1,124 @@
-import turtle
+import pygame
 import time
 import random
 
-DELAY = 0.1
-SCORE = 0
-HIGH_SCORE = 0
+# Initialize Pygame
+pygame.init()
 
-# Set up the screen
-win = turtle.Screen()
-win.title("Snake Game")
-win.bgcolor("black")
-win.setup(width=600, height=600)
-win.tracer(0)
+# Define colors
+white = (255, 255, 255)
+yellow = (255, 255, 102)
+black = (0, 0, 0)
+red = (213, 50, 80)
+green = (0, 255, 0)
+blue = (50, 153, 213)
 
-# Snake head
-head = turtle.Turtle()
-head.speed(0)
-head.shape("square")
-head.color("white")
-head.penup()
-head.goto(0, 0)
-head.direction = "stop"
+# Set display dimensions
+width, height = 600, 400
+display = pygame.display.set_mode((width, height))
+pygame.display.set_caption('Snake Game')
 
-# Snake food
-food = turtle.Turtle()
-food.speed(0)
-food.shape("circle")
-food.color("red")
-food.penup()
-food.goto(0, 100)
+# Game settings
+clock = pygame.time.Clock()
+snake_block = 10
+snake_speed = 15
 
-segments = []
+# Fonts
+font_style = pygame.font.SysFont("bahnschrift", 25)
+score_font = pygame.font.SysFont("comicsansms", 35)
 
-# Score
-score = turtle.Turtle()
-score.speed(0)
-score.color("white")
-score.penup()
-score.hideturtle()
-score.goto(0, 260)
-score.write("Score: 0  High Score: 0", align="center", font=("Courier", 24, "normal"))
+def score_display(score):
+    score_text = score_font.render("Score: " + str(score), True, black)
+    display.blit(score_text, [0, 0])
 
-# Functions
-def go_up():
-    if head.direction != "down":
-        head.direction = "up"
+def draw_snake(snake_block, snake_list):
+    for x in snake_list:
+        pygame.draw.rect(display, black, [x[0], x[1], snake_block, snake_block])
 
-def go_down():
-    if head.direction != "up":
-        head.direction = "down"
+def message(msg, color):
+    mesg = font_style.render(msg, True, color)
+    display.blit(mesg, [width / 6, height / 3])
 
-def go_left():
-    if head.direction != "right":
-        head.direction = "left"
+def game_loop():
+    game_over = False
+    game_close = False
 
-def go_right():
-    if head.direction != "left":
-        head.direction = "right"
+    x1 = width / 2
+    y1 = height / 2
+    x1_change = 0
+    y1_change = 0
 
-def move():
-    if head.direction == "up":
-        y = head.ycor()
-        head.sety(y + 20)
+    snake_list = []
+    length_of_snake = 1
 
-    if head.direction == "down":
-        y = head.ycor()
-        head.sety(y - 20)
+    foodx = round(random.randrange(0, width - snake_block) / 10.0) * 10.0
+    foody = round(random.randrange(0, height - snake_block) / 10.0) * 10.0
 
-    if head.direction == "left":
-        x = head.xcor()
-        head.setx(x - 20)
+    while not game_over:
 
-    if head.direction == "right":
-        x = head.xcor()
-        head.setx(x + 20)
+        while game_close == True:
+            display.fill(blue)
+            message("You Lost! Press C-Play Again or Q-Quit", red)
+            score_display(length_of_snake - 1)
+            pygame.display.update()
 
-def check_collision():
-    global SCORE, HIGH_SCORE
-    if head.distance(food) < 20:
-        x = random.randint(-290, 290)
-        y = random.randint(-290, 290)
-        food.goto(x, y)
+            for event in pygame.event.get():
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_q:
+                        game_over = True
+                        game_close = False
+                    if event.key == pygame.K_c:
+                        game_loop()
 
-        # Add a new segment
-        new_segment = turtle.Turtle()
-        new_segment.speed(0)
-        new_segment.shape("square")
-        new_segment.color("grey")
-        new_segment.penup()
-        segments.append(new_segment)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                game_over = True
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    x1_change = -snake_block
+                    y1_change = 0
+                elif event.key == pygame.K_RIGHT:
+                    x1_change = snake_block
+                    y1_change = 0
+                elif event.key == pygame.K_UP:
+                    y1_change = -snake_block
+                    x1_change = 0
+                elif event.key == pygame.K_DOWN:
+                    y1_change = snake_block
+                    x1_change = 0
 
-        SCORE += 10
+        if x1 >= width or x1 < 0 or y1 >= height or y1 < 0:
+            game_close = True
 
-        if SCORE > HIGH_SCORE:
-            HIGH_SCORE = SCORE
+        x1 += x1_change
+        y1 += y1_change
+        display.fill(blue)
+        pygame.draw.rect(display, green, [foodx, foody, snake_block, snake_block])
+        snake_head = []
+        snake_head.append(x1)
+        snake_head.append(y1)
+        snake_list.append(snake_head)
+        if len(snake_list) > length_of_snake:
+            del snake_list[0]
 
-        score.clear()
-        score.write("Score: {}  High Score: {}".format(SCORE, HIGH_SCORE), align="center", font=("Courier", 24, "normal"))
+        for x in snake_list[:-1]:
+            if x == snake_head:
+                game_close = True
 
-def check_collision_with_body():
-    for segment in segments:
-        if segment.distance(head) < 20:
-            time.sleep(1)
-            head.goto(0, 0)
-            head.direction = "stop"
+        draw_snake(snake_block, snake_list)
+        score_display(length_of_snake - 1)
 
-            # Hide the segments
-            for segment in segments:
-                segment.goto(1000, 1000)
+        pygame.display.update()
 
-            # Clear the segments list
-            segments.clear()
+        if x1 == foodx and y1 == foody:
+            foodx = round(random.randrange(0, width - snake_block) / 10.0) * 10.0
+            foody = round(random.randrange(0, height - snake_block) / 10.0) * 10.0
+            length_of_snake += 1
 
-            # Reset the score
-            SCORE = 0
-            score.clear()
-            score.write("Score: {}  High Score: {}".format(SCORE, HIGH_SCORE), align="center", font=("Courier", 24, "normal"))
+        clock.tick(snake_speed)
 
-def move_segments():
-    for index in range(len(segments) - 1, 0, -1):
-        x = segments[index - 1].xcor()
-        y = segments[index - 1].ycor()
-        segments[index].goto(x, y)
+    pygame.quit()
+    quit()
 
-    if len(segments) > 0:
-        x = head.xcor()
-        y = head.ycor()
-        segments[0].goto(x, y)
-
-# Keyboard bindings
-win.listen()
-win.onkeypress(go_up, "w")
-win.onkeypress(go_down, "s")
-win.onkeypress(go_left, "a")
-win.onkeypress(go_right, "d")
-
-# Main game loop
-while True:
-    win.update()
-
-    move()
-    move_segments()
-    check_collision()
-    check_collision_with_body()
-
-    time.sleep(DELAY)
+if __name__ == "__main__":
+    game_loop()
